@@ -21,7 +21,7 @@ Serial pc(USBTX, USBRX);
 
 // Create 2 Ticker objects for recurring interrupts. One for blink a LED and the other one to update the sensor lectures periodicly
 Ticker blinky;
-Ticker measurementy;
+Ticker flaggy;
 
 // Initialize variables
 
@@ -30,16 +30,16 @@ float Temp_Fahrenheit;
 float Temp_Kelvin;
 float Humidity;
 float Pressure;
-bool flag=true;
+volatile bool flag=1;
 
 // Handler for the aliveness LED; to be called every 0.5s
 void blink(){
  led = !led;
 }
 // Handler for the measurements update; rise a flag every 3 seconds
-void measurement()
+void flag_handler()
 {
- flag=true;   
+ flag=1;   
 }
  
 
@@ -49,24 +49,21 @@ static XNucleoIKS01A2 *mems_expansion_board = XNucleoIKS01A2::instance(D14, D15,
 static HTS221Sensor *hum_temp = mems_expansion_board->ht_sensor;
 static LPS22HBSensor *press_temp = mems_expansion_board->pt_sensor;
 
+
 /* Attach a function to be called by the Ticker objects at a specific interval in seconds */
 blinky.attach(&blink, 0.5);
-measurementy.attach(&measurement,.5);
+flaggy.attach(&flag_handler,3);
    
 /* Enable all sensors */
 hum_temp->enable();
 press_temp->enable();
   
-  
-  printf("\r\n--- Starting new run ---\r\n");
- 
-  
-  
- 
+
   while(1) {
-    if(flag==true)
-    {
- 
+   
+    while(flag==1)
+    { 
+        printf("\r\n--- Starting new run ---\r\n");
         hum_temp->get_temperature(&Temp_Celsius);
         hum_temp->get_humidity(&Humidity);
         press_temp->get_pressure(&Pressure);
@@ -80,10 +77,10 @@ press_temp->enable();
         printf("humidity = %.2f %% \r\n", Humidity);
  
         printf("---\r\n");
- 
-        /* Turn down the measurements update flag */
-        flag=false;
     
+        /* Turn down the measurements update flag */
+        flag=0;
+         /*Wait for interrupts*/
     }
   }
 }
